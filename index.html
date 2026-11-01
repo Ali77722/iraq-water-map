@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#071a2b">
 <meta name="description" content="خريطة تعليمية تفاعلية لمياه العراق: دجلة والفرات والروافد والسدود والبحيرات والأهوار.">
 <title>مياه العراق | خريطة تفاعلية</title>
-<link rel="preconnect" href="https://unpkg.com">
-<link rel="preconnect" href="https://tile.openstreetmap.org">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<meta name="theme-color" content="#071a2b">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./assets/leaflet.css">
 <style>
 :root{--bg:#071a2b;--panel:#0c2237;--panel2:#102b43;--line:rgba(175,213,232,.13);--muted:#8ba7ba;--text:#eef7fb;--aqua:#46d6d0;--blue:#5aa9ff;--gold:#efc46c;--green:#82d6a5;--shadow:0 18px 50px rgba(0,0,0,.28)}
 *{box-sizing:border-box}html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:"Noto Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif}body{overflow:hidden}
@@ -49,17 +49,24 @@ header{grid-area:head;display:flex;align-items:center;justify-content:space-betw
 .custom-marker{background:#123b50;border:2px solid #8ce7df;color:#efffff;border-radius:50%;display:grid;place-items:center;font-size:13px;box-shadow:0 4px 12px #06192a77}
 @media(max-width:900px){.app{grid-template-columns:minmax(0,1fr) 330px}.sidebar{padding:15px 13px}}
 @media(max-width:680px){body{overflow:hidden}.app{grid-template-columns:1fr;grid-template-rows:65px 1fr 42dvh;grid-template-areas:"head" "map" "side"}header{padding:0 13px}.brand h1{font-size:14px}.brand p{font-size:9px}.logo{width:37px;height:37px}.status{display:none}.head-btn{padding:7px 9px;font-size:10px}#map{min-height:220px}.sidebar{border-left:0;border-top:1px solid var(--line);padding:13px 13px 20px}.map-float{top:10px;left:10px}.map-caption{bottom:10px;left:10px}.quick{min-height:80px;padding:9px}.quick strong{font-size:11px}}
+
+.offline-chip{border-color:rgba(91,205,190,.3)!important;color:#b8efe4!important}
+.place-label,.country-label{background:transparent!important;border:0!important}
+.place-label span{display:block;white-space:nowrap;padding:2px 5px;border-radius:5px;background:rgba(4,17,29,.78);border:1px solid rgba(150,205,220,.35);color:#f1fbff;font-size:10px;font-weight:700;box-shadow:0 2px 7px #0005}
+.country-label span{display:block;white-space:nowrap;color:rgba(204,224,232,.68);font-size:10px;font-weight:700;text-shadow:0 1px 3px #061522,1px 0 3px #061522}
+.leaflet-container{background:#0a2031}
+@media(max-width:680px){.head-actions{gap:5px;flex-wrap:wrap}.offline-chip{font-size:9px!important}}
 </style>
 </head>
 <body>
 <div class="app">
 <header>
   <div class="brand"><div class="logo">≈</div><div><h1>مياه العراق</h1><p>دليل جغرافي تفاعلي للأنهار والمسطحات المائية</p></div></div>
-  <div class="head-actions"><span class="status">خريطة تعليمية · العراق</span><button class="head-btn" id="aboutBtn">عن الخريطة</button></div>
+  <div class="head-actions"><span class="status" id="offlineStatus">يجهّز وضع عدم الاتصال…</span><span class="status">خريطة تعليمية · العراق</span><button class="head-btn" id="aboutBtn">عن الخريطة</button></div>
 </header>
 <div id="map">
   <div class="map-float"><button class="map-btn" id="resetMap">⌖ إعادة عرض العراق</button><button class="map-btn" id="zoomIn">＋</button><button class="map-btn" id="zoomOut">－</button></div>
-  <div class="map-caption">IRAQ · WATER SYSTEM</div><div class="map-focus-badge" id="mapFocusBadge">اضغط على خط النهر لإبراز مساره وفتح شرحه</div>
+  <div class="map-caption">IRAQ · OFFLINE WATER MAP</div><div class="map-focus-badge" id="mapFocusBadge">اضغط على خط النهر لإبراز مساره وفتح شرحه</div>
 </div>
 <aside class="sidebar">
   <div class="section-head"><h2>استكشف الموارد المائية</h2><span class="tiny" id="countLabel">جارٍ التحميل…</span></div>
@@ -92,16 +99,25 @@ header{grid-area:head;display:flex;align-items:center;justify-content:space-betw
     <button class="filter" data-filter="marsh">الأهوار</button>
   </div>
   <div class="list" id="resourceList"><div class="loading"><span class="dot"></span> تحميل بيانات الخريطة…</div></div>
-  <div class="notice">تنبيه: هذه خريطة تعليمية للمواقع والمسارات، وليست نظاماً لقياس مناسيب المياه أو التدفقات. بعض مواقع البحيرات والأهوار موضوعة كنقاط إرشادية تقريبية. بيانات طبقة الأنهار والمنشآت مأخوذة من خدمة جغرافية منشورة، وآخر تاريخ تعديل ظاهر لبعض طبقاتها هو 2019.<br><a class="source-link" href="https://services1.arcgis.com/0MSEUqKaxRlEPj5g/ArcGIS/rest/services/Water_Resources_Iraq/FeatureServer" target="_blank" rel="noopener">مصدر طبقات الموارد المائية</a> · <a class="source-link" href="https://investpromo.gov.iq/investment-map/" target="_blank" rel="noopener">الخريطة الاستثمارية الوطنية</a></div>
+  <div class="notice">تنبيه: هذه خريطة تعليمية للمواقع والمسارات، وليست نظاماً لقياس مناسيب المياه أو التدفقات. بعض مواقع البحيرات والأهوار موضوعة كنقاط إرشادية تقريبية. طبقات الأنهار والمنشآت محفوظة داخل المشروع لتعمل دون اتصال، ويعود مصدرها إلى بيانات جغرافية منشورة (آخر تعديل ظاهر لبعض الطبقات: 2019). الخلفية الجغرافية مبسطة ولا تتضمن شوارع أو خدمات تفصيلية.<br><a class="source-link" href="https://services1.arcgis.com/0MSEUqKaxRlEPj5g/ArcGIS/rest/services/Water_Resources_Iraq/FeatureServer" target="_blank" rel="noopener">مصدر طبقات الموارد المائية</a> · <a class="source-link" href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">حدود الدول: Natural Earth</a></div>
 </aside>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="./assets/leaflet.js"></script>
 <script>
 (function(){
 "use strict";
-const service="https://services1.arcgis.com/0MSEUqKaxRlEPj5g/ArcGIS/rest/services/Water_Resources_Iraq/FeatureServer";
-const map=L.map("map",{zoomControl:false,preferCanvas:true}).setView([33.2,43.8],6);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
+const map=L.map("map",{zoomControl:false,preferCanvas:true,minZoom:5,maxZoom:10}).setView([33.2,43.8],6);
+map.attributionControl.addAttribution('حدود الدول: Natural Earth · طبقات المياه: ArcGIS');
+map.createPane("contextLabels");map.getPane("contextLabels").style.zIndex=640;map.getPane("contextLabels").style.pointerEvents="none";
+const countryLabels=L.layerGroup().addTo(map),cityLabels=L.layerGroup().addTo(map);
+const cities=[
+ {n:"الموصل",p:[36.34,43.12]},{n:"أربيل",p:[36.19,44.01]},{n:"كركوك",p:[35.47,44.39]},
+ {n:"تكريت",p:[34.61,43.68]},{n:"بغداد",p:[33.31,44.36]},{n:"الرمادي",p:[33.42,43.30]},
+ {n:"كربلاء",p:[32.62,44.02]},{n:"النجف",p:[32.00,44.33]},{n:"الكوت",p:[32.51,45.82]},
+ {n:"العمارة",p:[31.84,47.14]},{n:"الناصرية",p:[31.05,46.26]},{n:"البصرة",p:[30.51,47.81]}
+];
+function cityIcon(name){return L.divIcon({className:"place-label",html:"<span>"+name+"</span>",iconSize:[70,20],iconAnchor:[35,10]})}
+function updateCityLabels(){if(map.getZoom()>=7){if(!cityLabels.getLayers().length)cities.forEach(c=>L.marker(c.p,{pane:"contextLabels",icon:cityIcon(c.n),interactive:false}).addTo(cityLabels));}else cityLabels.clearLayers();}map.on("zoomend",updateCityLabels);
 const groups={rivers:L.layerGroup().addTo(map),dams:L.layerGroup().addTo(map),lakes:L.layerGroup().addTo(map),marshes:L.layerGroup().addTo(map)};
 const riverFocus=L.layerGroup().addTo(map);
 const catalog=[];
@@ -439,14 +455,21 @@ function descriptionFor(name,cat){
  return "منشأة مائية أو موقع مرتبط بإدارة الموارد المائية في العراق.";
 }
 async function loadArcLayer(id){
- const qs=new URLSearchParams({where:"1=1",outFields:"*",returnGeometry:"true",outSR:"4326",f:"geojson"});
- const res=await fetch(service+"/"+id+"/query?"+qs.toString(),{mode:"cors"});
- if(!res.ok)throw new Error("layer "+id+" HTTP "+res.status);
- const json=await res.json();if(json.error)throw new Error(json.error.message||"ArcGIS error");
+ const res=await fetch("./data/layer-"+id+".geojson");
+ if(!res.ok)throw new Error("local layer "+id+" HTTP "+res.status);
+ const json=await res.json();if(!json.features)throw new Error("Invalid local layer "+id);
  return json;
+}
+async function loadBasemap(){
+ const res=await fetch("./data/countries.geojson");if(!res.ok)throw new Error("local basemap HTTP "+res.status);
+ const data=await res.json();
+ L.geoJSON(data,{interactive:false,style:f=>{const iraq=f.properties&&f.properties.name==="Iraq";return {color:iraq?"#5bbfc1":"#385669",weight:iraq?2.5:1.1,opacity:1,fillColor:iraq?"#17475a":"#102c40",fillOpacity:1};}}).addTo(map);
+ (data.features||[]).forEach(f=>{const p=f.properties||{};if(!p.label||!p.nameAr)return;const icon=L.divIcon({className:"country-label",html:"<span>"+p.nameAr+"</span>",iconSize:[90,22],iconAnchor:[45,11]});L.marker(p.label,{pane:"contextLabels",icon:icon,interactive:false}).addTo(countryLabels);});
+ updateCityLabels();
 }
 async function loadData(){
  let riverN=0,damN=0,structureN=0,wetN=0;
+ try{await loadBasemap()}catch(e){console.warn("Offline basemap unavailable",e)}
  try{const d=await loadArcLayer(3);sourceFeatures.rivers=d.features||[];riverN=renderFeatureLayer(d,3,"river")}catch(e){console.warn("Rivers layer unavailable",e)}
  try{const d=await loadArcLayer(0);sourceFeatures.dams=d.features||[];damN=renderFeatureLayer(d,0,"dam")}catch(e){console.warn("Dams layer unavailable",e)}
  try{const a=await loadArcLayer(1);structureN+=renderFeatureLayer(a,1,"dam");const b=await loadArcLayer(2);structureN+=renderFeatureLayer(b,2,"dam")}catch(e){console.warn("Control structures unavailable",e)}
@@ -491,8 +514,23 @@ document.querySelectorAll(".quick").forEach(b=>b.addEventListener("click",()=>ad
 document.querySelectorAll(".layer-toggle input").forEach(c=>c.addEventListener("change",()=>{activeLayers[c.dataset.layer]=c.checked;if(c.checked){map.addLayer(groups[c.dataset.layer]);if(c.dataset.layer==="rivers")map.addLayer(riverFocus)}else{map.removeLayer(groups[c.dataset.layer]);if(c.dataset.layer==="rivers")map.removeLayer(riverFocus)}}));
 $("resetMap").addEventListener("click",()=>{riverFocus.clearLayers();$("mapFocusBadge").textContent="اضغط على خط النهر لإبراز مساره وفتح شرحه";map.flyTo([33.2,43.8],6,{duration:1.1})});
 $("zoomIn").addEventListener("click",()=>map.zoomIn());$("zoomOut").addEventListener("click",()=>map.zoomOut());
-$("aboutBtn").addEventListener("click",()=>{setDetail({name:"عن خريطة مياه العراق",type:"مورد مائي",desc:"مشروع تعليمي تفاعلي يجمع طبقات الأنهار والمنشآت المائية مع مواقع البحيرات والأهوار البارزة. اضغط على أي عنصر أو استخدم البحث والطبقات لاستكشافه. لا تعرض الخريطة بيانات آنية عن مناسيب المياه أو التدفقات.",location:"جمهورية العراق",source:"OpenStreetMap وArcGIS وبيانات تعريفية للمواقع"},"معلومات المشروع");});
+$("aboutBtn").addEventListener("click",()=>{setDetail({name:"عن خريطة مياه العراق",type:"مورد مائي",desc:"مشروع تعليمي تفاعلي يجمع طبقات الأنهار والمنشآت المائية مع مواقع البحيرات والأهوار البارزة. اضغط على أي عنصر أو استخدم البحث والطبقات لاستكشافه. لا تعرض الخريطة بيانات آنية عن مناسيب المياه أو التدفقات.",location:"جمهورية العراق",source:"حدود Natural Earth وطبقات مياه ArcGIS المحفوظة محلياً"},"معلومات المشروع");});
 loadData().catch(e=>{console.error(e);$("resourceList").innerHTML='<div class="notice">تعذّر تحميل بعض الطبقات الجغرافية حالياً. تبقى المواقع الأساسية والقائمة التوضيحية متاحة، ويمكن إعادة المحاولة عند توفر الاتصال.</div>';Object.keys(known).forEach(key=>addCatalog(Object.assign({id:key},known[key])));lakes.forEach(x=>addPoint(x,"lakes"));marshes.forEach(x=>addPoint(x,"marshes"));addFallbackDams();renderCatalog()});
+})();
+</script>
+<script>
+(function(){
+ const el=document.getElementById("offlineStatus");if(!el)return;
+ function update(){
+  if(!navigator.onLine){el.textContent="وضع عدم الاتصال · تعمل محلياً";el.classList.add("offline-chip");}
+  else if(navigator.serviceWorker&&navigator.serviceWorker.controller){el.textContent="متصل · محفوظة دون إنترنت";el.classList.add("offline-chip");}
+  else if(el.dataset.cached==="yes"){el.textContent="حُفظت ملفات الخريطة دون إنترنت";el.classList.add("offline-chip");}
+ }
+ window.addEventListener("online",update);window.addEventListener("offline",update);
+ if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("./sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{el.dataset.cached="yes";update();if(navigator.onLine&&!navigator.serviceWorker.controller)el.textContent="حُفظت ملفات الخريطة · أعد فتحها دون إنترنت";}).catch(()=>{el.textContent="تعذّر تجهيز الحفظ دون إنترنت";});
+ }else{el.textContent="المتصفح لا يدعم وضع عدم الاتصال";}
+ update();
 })();
 </script>
 </body>
