@@ -175,7 +175,7 @@ function renderFeatureLayer(data,layerId,cat){
    const p=feature.properties||{};const name=p.NAME||p.name||p.RIVER||p.Name||("مورد مائي "+(p.OBJECTID||""));
    layer.bindTooltip(String(name),{direction:"top",sticky:true});
    layer.on("click",function(){
-     const item={id:cat+"-"+(p.OBJECTID||name),name:String(name),type:cat==="river"?"river":"dam",desc:descriptionFor(name,cat),location:"الموقع موضح على الخريطة",source:"خدمة الموارد المائية المنشورة"};
+     const item={id:cat+"-"+(p.OBJECTID||name),name:String(name),type:cat==="river"?"river":cat==="marsh"?"marsh":"dam",desc:descriptionFor(name,cat),location:"الموقع موضح على الخريطة",source:"خدمة الموارد المائية المنشورة"};
      setDetail(item,item.source);fitToLayer(layer,null,8);
    });
  }});
@@ -232,7 +232,7 @@ function renderCatalog(){
 function selectItem(item){
  if(item.id==="tigris"||item.id==="euphrates"||item.id==="diyala"||item.id==="greatzab"||item.id==="littlezab"||item.id==="adhaim"||item.id==="shattarab"||item.id==="gharraf"){addKnownRiver(item.id);return}
  if(item.marker){setDetail(item,item.source);map.flyTo([item.lat,item.lng],9,{duration:1});return}
- if(item.feature){setDetail(item,item.source);return}
+ if(item.feature){setDetail(item,item.source);fitToLayer(L.geoJSON(item.feature),null,8);return}
  setDetail(item,item.source);if(item.lat&&item.lng)map.flyTo([item.lat,item.lng],8,{duration:1});
 }
 document.querySelectorAll(".filter").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".filter").forEach(x=>x.classList.remove("active"));b.classList.add("active");currentFilter=b.dataset.filter;renderCatalog()}));
