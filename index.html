@@ -62,11 +62,11 @@ header{grid-area:head;display:flex;align-items:center;justify-content:space-betw
 <div class="app">
 <header>
   <div class="brand"><div class="logo">≈</div><div><h1>مياه العراق</h1><p>دليل جغرافي تفاعلي للأنهار والمسطحات المائية</p></div></div>
-  <div class="head-actions"><span class="status" id="offlineStatus">يجهّز وضع عدم الاتصال…</span><span class="status">خريطة تعليمية · العراق</span><button class="head-btn" id="aboutBtn">عن الخريطة</button></div>
+  <div class="head-actions"><span class="status">خريطة تعليمية · العراق</span><button class="head-btn" id="aboutBtn">عن الخريطة</button></div>
 </header>
 <div id="map">
   <div class="map-float"><button class="map-btn" id="resetMap">⌖ إعادة عرض العراق</button><button class="map-btn" id="zoomIn">＋</button><button class="map-btn" id="zoomOut">－</button></div>
-  <div class="map-caption">IRAQ · OFFLINE WATER MAP</div><div class="map-focus-badge" id="mapFocusBadge">اضغط على خط النهر لإبراز مساره وفتح شرحه</div>
+  <div class="map-caption">IRAQ · WATER SYSTEM</div><div class="map-focus-badge" id="mapFocusBadge">اضغط على خط النهر لإبراز مساره وفتح شرحه</div>
 </div>
 <aside class="sidebar">
   <div class="section-head"><h2>استكشف الموارد المائية</h2><span class="tiny" id="countLabel">جارٍ التحميل…</span></div>
@@ -99,17 +99,18 @@ header{grid-area:head;display:flex;align-items:center;justify-content:space-betw
     <button class="filter" data-filter="marsh">الأهوار</button>
   </div>
   <div class="list" id="resourceList"><div class="loading"><span class="dot"></span> تحميل بيانات الخريطة…</div></div>
-  <div class="notice">تنبيه: هذه خريطة تعليمية للمواقع والمسارات، وليست نظاماً لقياس مناسيب المياه أو التدفقات. بعض مواقع البحيرات والأهوار موضوعة كنقاط إرشادية تقريبية. طبقات الأنهار والمنشآت محفوظة داخل المشروع لتعمل دون اتصال، ويعود مصدرها إلى بيانات جغرافية منشورة (آخر تعديل ظاهر لبعض الطبقات: 2019). الخلفية الجغرافية مبسطة ولا تتضمن شوارع أو خدمات تفصيلية.<br><a class="source-link" href="https://services1.arcgis.com/0MSEUqKaxRlEPj5g/ArcGIS/rest/services/Water_Resources_Iraq/FeatureServer" target="_blank" rel="noopener">مصدر طبقات الموارد المائية</a> · <a class="source-link" href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">حدود الدول: Natural Earth</a></div>
+  <div class="notice">تنبيه: هذه خريطة تعليمية للمواقع والمسارات، وليست نظاماً لقياس مناسيب المياه أو التدفقات. بعض مواقع البحيرات والأهوار موضوعة كنقاط إرشادية تقريبية. طبقات الأنهار والمنشآت محفوظة داخل المشروع لتعمل دون اتصال، ويعود مصدرها إلى بيانات جغرافية منشورة (آخر تعديل ظاهر لبعض الطبقات: 2019). عند انقطاع الإنترنت تُستخدم خلفية حدود مبسطة ولا تتضمن تفاصيل الشوارع.<br><a class="source-link" href="https://services1.arcgis.com/0MSEUqKaxRlEPj5g/ArcGIS/rest/services/Water_Resources_Iraq/FeatureServer" target="_blank" rel="noopener">مصدر طبقات الموارد المائية</a> · <a class="source-link" href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">حدود الدول: Natural Earth</a></div>
 </aside>
 </div>
 <script src="./assets/leaflet.js"></script>
 <script>
 (function(){
 "use strict";
-const map=L.map("map",{zoomControl:false,preferCanvas:true,minZoom:5,maxZoom:10}).setView([33.2,43.8],6);
-map.attributionControl.addAttribution('حدود الدول: Natural Earth · طبقات المياه: ArcGIS');
+const map=L.map("map",{zoomControl:false,preferCanvas:true}).setView([33.2,43.8],6);
+const osmTiles=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
 map.createPane("contextLabels");map.getPane("contextLabels").style.zIndex=640;map.getPane("contextLabels").style.pointerEvents="none";
-const countryLabels=L.layerGroup().addTo(map),cityLabels=L.layerGroup().addTo(map);
+const countryLabels=L.layerGroup(),cityLabels=L.layerGroup();
+let offlineBasemapLayer=null,offlineBasemapPromise=null;
 const cities=[
  {n:"الموصل",p:[36.34,43.12]},{n:"أربيل",p:[36.19,44.01]},{n:"كركوك",p:[35.47,44.39]},
  {n:"تكريت",p:[34.61,43.68]},{n:"بغداد",p:[33.31,44.36]},{n:"الرمادي",p:[33.42,43.30]},
@@ -117,7 +118,12 @@ const cities=[
  {n:"العمارة",p:[31.84,47.14]},{n:"الناصرية",p:[31.05,46.26]},{n:"البصرة",p:[30.51,47.81]}
 ];
 function cityIcon(name){return L.divIcon({className:"place-label",html:"<span>"+name+"</span>",iconSize:[70,20],iconAnchor:[35,10]})}
-function updateCityLabels(){if(map.getZoom()>=7){if(!cityLabels.getLayers().length)cities.forEach(c=>L.marker(c.p,{pane:"contextLabels",icon:cityIcon(c.n),interactive:false}).addTo(cityLabels));}else cityLabels.clearLayers();}map.on("zoomend",updateCityLabels);
+function updateCityLabels(){if(!offlineBasemapLayer||!map.hasLayer(offlineBasemapLayer)){cityLabels.clearLayers();return;}if(map.getZoom()>=7){if(!cityLabels.getLayers().length)cities.forEach(c=>L.marker(c.p,{pane:"contextLabels",icon:cityIcon(c.n),interactive:false}).addTo(cityLabels));}else cityLabels.clearLayers();}
+map.on("zoomend",updateCityLabels);
+function showOnlineBasemap(){if(offlineBasemapLayer&&map.hasLayer(offlineBasemapLayer))map.removeLayer(offlineBasemapLayer);if(map.hasLayer(countryLabels))map.removeLayer(countryLabels);if(map.hasLayer(cityLabels))map.removeLayer(cityLabels);countryLabels.clearLayers();cityLabels.clearLayers();if(!map.hasLayer(osmTiles))osmTiles.addTo(map);}
+function showOfflineBasemap(){if(map.hasLayer(osmTiles))map.removeLayer(osmTiles);loadBasemap().catch(e=>console.warn("Offline basemap unavailable",e));}
+window.addEventListener("online",showOnlineBasemap);window.addEventListener("offline",showOfflineBasemap);
+if(!navigator.onLine)showOfflineBasemap();
 const groups={rivers:L.layerGroup().addTo(map),dams:L.layerGroup().addTo(map),lakes:L.layerGroup().addTo(map),marshes:L.layerGroup().addTo(map)};
 const riverFocus=L.layerGroup().addTo(map);
 const catalog=[];
@@ -461,15 +467,21 @@ async function loadArcLayer(id){
  return json;
 }
 async function loadBasemap(){
- const res=await fetch("./data/countries.geojson");if(!res.ok)throw new Error("local basemap HTTP "+res.status);
- const data=await res.json();
- L.geoJSON(data,{interactive:false,style:f=>{const iraq=f.properties&&f.properties.name==="Iraq";return {color:iraq?"#5bbfc1":"#385669",weight:iraq?2.5:1.1,opacity:1,fillColor:iraq?"#17475a":"#102c40",fillOpacity:1};}}).addTo(map);
- (data.features||[]).forEach(f=>{const p=f.properties||{};if(!p.label||!p.nameAr)return;const icon=L.divIcon({className:"country-label",html:"<span>"+p.nameAr+"</span>",iconSize:[90,22],iconAnchor:[45,11]});L.marker(p.label,{pane:"contextLabels",icon:icon,interactive:false}).addTo(countryLabels);});
- updateCityLabels();
+ if(offlineBasemapLayer){if(!navigator.onLine&&!map.hasLayer(offlineBasemapLayer))offlineBasemapLayer.addTo(map);if(!navigator.onLine&&!map.hasLayer(countryLabels))countryLabels.addTo(map);if(!navigator.onLine&&!map.hasLayer(cityLabels))cityLabels.addTo(map);updateCityLabels();return;}
+ if(offlineBasemapPromise)return offlineBasemapPromise;
+ offlineBasemapPromise=(async()=>{
+  const res=await fetch("./data/countries.geojson");if(!res.ok)throw new Error("local basemap HTTP "+res.status);
+  const data=await res.json();
+  offlineBasemapLayer=L.geoJSON(data,{interactive:false,style:f=>{const iraq=f.properties&&f.properties.name==="Iraq";return {color:iraq?"#5bbfc1":"#385669",weight:iraq?2.5:1.1,opacity:1,fillColor:iraq?"#17475a":"#102c40",fillOpacity:1};}});
+  if(!navigator.onLine){offlineBasemapLayer.addTo(map);countryLabels.addTo(map);cityLabels.addTo(map);}
+  (data.features||[]).forEach(f=>{const p=f.properties||{};if(!p.label||!p.nameAr)return;const icon=L.divIcon({className:"country-label",html:"<span>"+p.nameAr+"</span>",iconSize:[90,22],iconAnchor:[45,11]});L.marker(p.label,{pane:"contextLabels",icon:icon,interactive:false}).addTo(countryLabels);});
+  updateCityLabels();
+ })();
+ try{return await offlineBasemapPromise;}finally{offlineBasemapPromise=null;}
 }
 async function loadData(){
  let riverN=0,damN=0,structureN=0,wetN=0;
- try{await loadBasemap()}catch(e){console.warn("Offline basemap unavailable",e)}
+ if(!navigator.onLine){try{await loadBasemap()}catch(e){console.warn("Offline basemap unavailable",e)}}
  try{const d=await loadArcLayer(3);sourceFeatures.rivers=d.features||[];riverN=renderFeatureLayer(d,3,"river")}catch(e){console.warn("Rivers layer unavailable",e)}
  try{const d=await loadArcLayer(0);sourceFeatures.dams=d.features||[];damN=renderFeatureLayer(d,0,"dam")}catch(e){console.warn("Dams layer unavailable",e)}
  try{const a=await loadArcLayer(1);structureN+=renderFeatureLayer(a,1,"dam");const b=await loadArcLayer(2);structureN+=renderFeatureLayer(b,2,"dam")}catch(e){console.warn("Control structures unavailable",e)}
@@ -518,20 +530,6 @@ $("aboutBtn").addEventListener("click",()=>{setDetail({name:"عن خريطة م�
 loadData().catch(e=>{console.error(e);$("resourceList").innerHTML='<div class="notice">تعذّر تحميل بعض الطبقات الجغرافية حالياً. تبقى المواقع الأساسية والقائمة التوضيحية متاحة، ويمكن إعادة المحاولة عند توفر الاتصال.</div>';Object.keys(known).forEach(key=>addCatalog(Object.assign({id:key},known[key])));lakes.forEach(x=>addPoint(x,"lakes"));marshes.forEach(x=>addPoint(x,"marshes"));addFallbackDams();renderCatalog()});
 })();
 </script>
-<script>
-(function(){
- const el=document.getElementById("offlineStatus");if(!el)return;
- function update(){
-  if(!navigator.onLine){el.textContent="وضع عدم الاتصال · تعمل محلياً";el.classList.add("offline-chip");}
-  else if(navigator.serviceWorker&&navigator.serviceWorker.controller){el.textContent="متصل · محفوظة دون إنترنت";el.classList.add("offline-chip");}
-  else if(el.dataset.cached==="yes"){el.textContent="حُفظت ملفات الخريطة دون إنترنت";el.classList.add("offline-chip");}
- }
- window.addEventListener("online",update);window.addEventListener("offline",update);
- if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("./sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{el.dataset.cached="yes";update();if(navigator.onLine&&!navigator.serviceWorker.controller)el.textContent="حُفظت ملفات الخريطة · أعد فتحها دون إنترنت";}).catch(()=>{el.textContent="تعذّر تجهيز الحفظ دون إنترنت";});
- }else{el.textContent="المتصفح لا يدعم وضع عدم الاتصال";}
- update();
-})();
-</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").catch(e=>console.warn("Offline cache unavailable",e));}</script>
 </body>
 </html>

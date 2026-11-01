@@ -1,4 +1,4 @@
-const CACHE_NAME = "iraq-water-map-offline-v1";
+const CACHE_NAME = "iraq-water-map-offline-v2";
 const CORE_FILES = [
   "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
   "./assets/leaflet.js", "./assets/leaflet.css",
